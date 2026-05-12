@@ -1,16 +1,18 @@
 # regular-check-in
 
-用于自有 New API 站点测试学习的通用网页签到自动化项目。项目使用 TypeScript + Playwright，支持 Docker 部署、多站点配置、系统访问令牌登录、浏览器登录态保存、SQLite 运行记录、失败截图和定时执行。
+用于自有 New API 站点测试学习的通用网页签到自动化项目。项目使用 TypeScript + Playwright，支持 Docker 部署、多站点配置、系统访问令牌登录、SQLite 运行记录、失败截图和定时执行。
 
-## 配置
+## 单文件配置
 
-所有站点统一配置在 `config/config.json` 的 `sites` 数组里。New API 站点只需要填：
+所有站点配置都放在 `config/config.json`。你只需要维护这一个文件，不需要再单独配置 `.env` 令牌。
+
+New API 站点主要填三个字段：
 
 - `url`：网站地址，只填域名，不需要带 `/console/personal`
 - `appId`：New API 用户 ID，也就是页面里的 `ID: xxx`
-- `accessTokenEnv`：访问令牌对应的环境变量名
+- `accessToken`：个人设置里生成的“系统访问令牌”
 
-示例：
+当前配置示例：
 
 ```json
 {
@@ -25,7 +27,7 @@
       "name": "Elysiver",
       "url": "https://elysiver.h-e.top",
       "appId": "691",
-      "accessTokenEnv": "ELYSIVER_ACCESS_TOKEN",
+      "accessToken": "",
       "enabled": true
     },
     {
@@ -33,14 +35,22 @@
       "name": "API456",
       "url": "https://api456.me",
       "appId": "691",
-      "accessTokenEnv": "API456_ACCESS_TOKEN",
+      "accessToken": "",
       "enabled": true
     }
   ]
 }
 ```
 
-如果你愿意把令牌直接放进配置，也支持 `accessToken`：
+你要做的就是把每个站点的 `accessToken` 填进去。如果用户 ID 不是 `691`，同步修改 `appId`。
+
+访问令牌生成位置：
+
+```txt
+个人设置 -> 安全设置 -> 系统访问令牌 -> 生成令牌
+```
+
+新增站点时复制一段：
 
 ```json
 {
@@ -53,28 +63,7 @@
 }
 ```
 
-但更推荐使用 `accessTokenEnv`，不要把令牌提交到 Git。
-
-## 环境变量
-
-复制示例文件：
-
-```bash
-cp .env.example .env
-```
-
-填写令牌：
-
-```env
-ELYSIVER_ACCESS_TOKEN=你的_elysiver_系统访问令牌
-API456_ACCESS_TOKEN=你的_api456_系统访问令牌
-```
-
-访问令牌在 New API 页面生成：
-
-```txt
-个人设置 -> 安全设置 -> 系统访问令牌 -> 生成令牌
-```
+注意：如果你把真实令牌写进 `config/config.json`，不要再把这个文件提交到公开仓库。
 
 ## 本地测试
 
@@ -106,14 +95,13 @@ npm run checkin
 
 ## Docker 部署
 
-服务器上同样需要配置 `.env`：
+服务器上编辑同一个文件：
 
-```env
-ELYSIVER_ACCESS_TOKEN=xxx
-API456_ACCESS_TOKEN=xxx
+```txt
+config/config.json
 ```
 
-启动：
+然后启动：
 
 ```bash
 docker compose up -d --build
@@ -132,9 +120,9 @@ docker compose exec regular-check-in node dist/index.js run
 docker compose exec regular-check-in node dist/index.js run --site elysiver
 ```
 
-## 其他配置
+## 可选字段
 
-如果某个站点的签到路径不是 `/console/personal`，可以额外配置：
+如果某个站点的签到路径不是 `/console/personal`：
 
 ```json
 {
@@ -142,7 +130,7 @@ docker compose exec regular-check-in node dist/index.js run --site elysiver
 }
 ```
 
-如果按钮文案或页面提示不同，可以额外配置：
+如果按钮文案或页面提示不同：
 
 ```json
 {
@@ -155,4 +143,4 @@ docker compose exec regular-check-in node dist/index.js run --site elysiver
 }
 ```
 
-旧配置里的 `baseUrl`、`auth.userId` 仍兼容，但新站点建议使用 `url`、`appId`、`accessTokenEnv`。
+旧配置里的 `accessTokenEnv` 仍兼容，但新配置推荐直接使用 `accessToken`，把站点地址、appId 和令牌放在同一个站点对象里。

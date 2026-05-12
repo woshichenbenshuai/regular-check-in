@@ -10,7 +10,7 @@
       "name": "Elysiver",
       "url": "https://elysiver.h-e.top",
       "appId": "691",
-      "accessTokenEnv": "ELYSIVER_ACCESS_TOKEN",
+      "accessToken": "",
       "enabled": true
     },
     {
@@ -18,7 +18,7 @@
       "name": "API456",
       "url": "https://api456.me",
       "appId": "691",
-      "accessTokenEnv": "API456_ACCESS_TOKEN",
+      "accessToken": "",
       "enabled": true
     }
   ]

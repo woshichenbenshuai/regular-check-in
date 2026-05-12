@@ -12,8 +12,6 @@ services:
       DATA_DIR: /app/data
       SCREENSHOT_ON_SUCCESS: "false"
       HANDOFF_TIMEOUT_SECONDS: "0"
-      ELYSIVER_ACCESS_TOKEN: ${ELYSIVER_ACCESS_TOKEN:-}
-      API456_ACCESS_TOKEN: ${API456_ACCESS_TOKEN:-}
     volumes:
       - ./data:/app/data
       - ./config/config.json:/app/config/config.json:ro
