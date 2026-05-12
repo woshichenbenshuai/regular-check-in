@@ -2,14 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { z } from 'zod';
-import type { RuntimeConfig, SiteConfig, SiteSelectors } from './types.js';
-
-const defaultSelectors: SiteSelectors = {
-  checkInButtonText: '立即签到',
-  alreadyCheckedTexts: ['已签到', '今日已签到', '已经签到', '明日再来'],
-  successTexts: ['签到成功', '领取成功', '获得', '奖励'],
-  challengeTexts: ['人机验证', '安全验证', '验证码', 'captcha', 'challenge', 'cf-challenge']
-};
+import type { RuntimeConfig, SiteConfig } from './types.js';
 
 const siteSchema = z.object({
   id: z.string().min(1),
@@ -19,6 +12,17 @@ const siteSchema = z.object({
   enabled: z.boolean().default(true),
   schedule: z.string().optional(),
   sessionFile: z.string().optional(),
+  auth: z
+    .discriminatedUnion('type', [
+      z.object({
+        type: z.literal('accessToken'),
+        userId: z.union([z.string(), z.number()]).transform(String),
+        accessToken: z.string().optional(),
+        accessTokenEnv: z.string().optional(),
+        headerMode: z.enum(['auto', 'raw', 'bearer']).default('auto')
+      })
+    ])
+    .optional(),
   selectors: z
     .object({
       checkInButtonText: z.string().optional(),
@@ -91,11 +95,12 @@ function normalizeSite(site: z.infer<typeof siteSchema>): SiteConfig {
     enabled: site.enabled,
     schedule: site.schedule,
     sessionFile: site.sessionFile,
+    auth: site.auth,
     selectors: {
-      checkInButtonText: site.selectors?.checkInButtonText ?? defaultSelectors.checkInButtonText,
-      alreadyCheckedTexts: site.selectors?.alreadyCheckedTexts ?? defaultSelectors.alreadyCheckedTexts,
-      successTexts: site.selectors?.successTexts ?? defaultSelectors.successTexts,
-      challengeTexts: site.selectors?.challengeTexts ?? defaultSelectors.challengeTexts
+      checkInButtonText: site.selectors?.checkInButtonText ?? '\u7acb\u5373\u7b7e\u5230',
+      alreadyCheckedTexts: site.selectors?.alreadyCheckedTexts ?? ['\u5df2\u7b7e\u5230', '\u4eca\u65e5\u5df2\u7b7e\u5230', '\u5df2\u7ecf\u7b7e\u5230', '\u660e\u65e5\u518d\u6765'],
+      successTexts: site.selectors?.successTexts ?? ['\u7b7e\u5230\u6210\u529f', '\u9886\u53d6\u6210\u529f', '\u83b7\u5f97', '\u5956\u52b1'],
+      challengeTexts: site.selectors?.challengeTexts ?? ['\u4eba\u673a\u9a8c\u8bc1', '\u5b89\u5168\u9a8c\u8bc1', '\u9a8c\u8bc1\u7801', 'captcha', 'challenge', 'cf-challenge']
     }
   };
 }

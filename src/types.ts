@@ -9,6 +9,18 @@ export interface SiteSelectors {
   challengeTexts: string[];
 }
 
+export type AccessTokenHeaderMode = 'auto' | 'raw' | 'bearer';
+
+export interface SiteAccessTokenAuth {
+  type: 'accessToken';
+  userId: string;
+  accessToken?: string;
+  accessTokenEnv?: string;
+  headerMode: AccessTokenHeaderMode;
+}
+
+export type SiteAuthConfig = SiteAccessTokenAuth;
+
 export interface SiteConfig {
   id: string;
   name: string;
@@ -17,6 +29,7 @@ export interface SiteConfig {
   enabled: boolean;
   schedule?: string;
   sessionFile?: string;
+  auth?: SiteAuthConfig;
   selectors: SiteSelectors;
 }
 

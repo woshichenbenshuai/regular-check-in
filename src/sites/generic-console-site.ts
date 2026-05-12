@@ -1,5 +1,6 @@
 import path from 'node:path';
 import type { Locator, Page } from 'playwright';
+import { setupAccessTokenAuth } from '../core/access-token-auth.js';
 import { safeFilePart } from '../core/fs.js';
 import type { CheckInMetrics, CheckInResult, SiteAdapter, SiteConfig, SiteRunInput } from '../types.js';
 
@@ -40,10 +41,10 @@ function extractFirst(text: string, patterns: RegExp[]): string | undefined {
 
 function extractMetrics(text: string): CheckInMetrics {
   return {
-    balance: extractFirst(text, [/(?:当前余额\s*)?硬币\s*([0-9]+(?:\.[0-9]+)?)/, /余额\s*[:：]?\s*([0-9]+(?:\.[0-9]+)?)/]),
-    monthlyEarned: extractFirst(text, [/硬币\s*([0-9]+(?:\.[0-9]+)?)\s*本月获得/, /本月获得\s*硬币?\s*([0-9]+(?:\.[0-9]+)?)/]),
-    totalEarned: extractFirst(text, [/硬币\s*([0-9]+(?:\.[0-9]+)?)\s*累计获得/, /累计获得\s*硬币?\s*([0-9]+(?:\.[0-9]+)?)/]),
-    totalCheckIns: extractFirst(text, [/([0-9]+)\s*累计签到/, /累计签到\s*([0-9]+)/])
+    balance: extractFirst(text, [/(?:\u5f53\u524d\u4f59\u989d\s*)?\u786c\u5e01\s*([0-9]+(?:\.[0-9]+)?)/, /\u4f59\u989d\s*[:\uff1a]?\s*([0-9]+(?:\.[0-9]+)?)/]),
+    monthlyEarned: extractFirst(text, [/\u786c\u5e01\s*([0-9]+(?:\.[0-9]+)?)\s*\u672c\u6708\u83b7\u5f97/, /\u672c\u6708\u83b7\u5f97\s*\u786c\u5e01?\s*([0-9]+(?:\.[0-9]+)?)/]),
+    totalEarned: extractFirst(text, [/\u786c\u5e01\s*([0-9]+(?:\.[0-9]+)?)\s*\u7d2f\u8ba1\u83b7\u5f97/, /\u7d2f\u8ba1\u83b7\u5f97\s*\u786c\u5e01?\s*([0-9]+(?:\.[0-9]+)?)/]),
+    totalCheckIns: extractFirst(text, [/([0-9]+)\s*\u7d2f\u8ba1\u7b7e\u5230/, /\u7d2f\u8ba1\u7b7e\u5230\s*([0-9]+)/])
   };
 }
 
@@ -85,6 +86,7 @@ export class GenericConsoleSiteAdapter implements SiteAdapter {
     const startedAt = nowIso();
     const { page, site } = input;
 
+    await setupAccessTokenAuth(page, site);
     await page.goto(personalUrl(site), { waitUntil: 'domcontentloaded', timeout: 60_000 });
     await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => undefined);
 
@@ -98,14 +100,14 @@ export class GenericConsoleSiteAdapter implements SiteAdapter {
           return this.run(input);
         }
       }
-      return result(input, startedAt, 'needs_handoff', '检测到人机验证或安全验证，需要人工处理。', { screenshotPath });
+      return result(input, startedAt, 'needs_handoff', 'Security challenge detected; manual handoff is required.', { screenshotPath });
     }
 
     const checkInButton = await findCheckInButton(page, site.selectors.checkInButtonText);
     if (!checkInButton) {
       const metrics = extractMetrics(text);
       const alreadyChecked = includesAny(text, site.selectors.alreadyCheckedTexts);
-      const message = alreadyChecked ? '页面显示今日可能已签到。' : '未找到签到按钮，可能未登录或页面结构已变化。';
+      const message = alreadyChecked ? 'Page indicates today may already be checked in.' : 'Check-in button was not found; login may have failed or the page changed.';
       const status = alreadyChecked ? 'skipped' : 'failed';
       const screenshotPath = status === 'failed' ? await saveScreenshot(page, input.dataDir, site.id, 'missing-button') : undefined;
       return result(input, startedAt, status, message, { metrics, screenshotPath });
@@ -118,12 +120,12 @@ export class GenericConsoleSiteAdapter implements SiteAdapter {
     text = await page.locator('body').innerText({ timeout: 10_000 }).catch(() => '');
     if (includesAny(text, site.selectors.challengeTexts)) {
       const screenshotPath = await saveScreenshot(page, input.dataDir, site.id, 'handoff-after-click');
-      return result(input, startedAt, 'needs_handoff', '点击签到后触发安全验证，需要人工处理。', { screenshotPath, metrics: extractMetrics(text) });
+      return result(input, startedAt, 'needs_handoff', 'Security challenge appeared after clicking check-in; manual handoff is required.', { screenshotPath, metrics: extractMetrics(text) });
     }
 
     const metrics = extractMetrics(text);
     const screenshotPath = input.screenshotOnSuccess ? await saveScreenshot(page, input.dataDir, site.id, 'success') : undefined;
-    const message = includesAny(text, site.selectors.successTexts) ? '签到完成，页面包含成功提示。' : '已点击签到按钮，请结合余额和截图确认结果。';
+    const message = includesAny(text, site.selectors.successTexts) ? 'Check-in completed and success text was found.' : 'Check-in button was clicked; verify the result from balance/logs.';
 
     return result(input, startedAt, 'success', message, { metrics, screenshotPath });
   }
