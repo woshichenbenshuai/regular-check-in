@@ -35,6 +35,7 @@ const siteSchema = z.object({
   selectors: z
     .object({
       checkInButtonText: z.string().optional(),
+      checkInButtonTexts: z.array(z.string()).optional(),
       alreadyCheckedTexts: z.array(z.string()).optional(),
       successTexts: z.array(z.string()).optional(),
       challengeTexts: z.array(z.string()).optional()
@@ -145,6 +146,7 @@ function normalizeSite(site: SiteInput): SiteConfig {
     auth: normalizeAuth(site),
     selectors: {
       checkInButtonText: site.selectors?.checkInButtonText ?? '\u7acb\u5373\u7b7e\u5230',
+      checkInButtonTexts: site.selectors?.checkInButtonTexts ?? [site.selectors?.checkInButtonText ?? '\u7acb\u5373\u7b7e\u5230', '\u7b7e\u5230', '\u7acb\u5373\u9886\u53d6', '\u9886\u53d6\u5956\u52b1'],
       alreadyCheckedTexts: site.selectors?.alreadyCheckedTexts ?? ['\u5df2\u7b7e\u5230', '\u4eca\u65e5\u5df2\u7b7e\u5230', '\u5df2\u7ecf\u7b7e\u5230', '\u660e\u65e5\u518d\u6765'],
       successTexts: site.selectors?.successTexts ?? ['\u7b7e\u5230\u6210\u529f', '\u9886\u53d6\u6210\u529f', '\u83b7\u5f97', '\u5956\u52b1'],
       challengeTexts: site.selectors?.challengeTexts ?? ['\u4eba\u673a\u9a8c\u8bc1', '\u5b89\u5168\u9a8c\u8bc1', '\u9a8c\u8bc1\u7801', 'captcha', 'challenge', 'cf-challenge']

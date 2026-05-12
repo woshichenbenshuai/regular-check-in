@@ -55,15 +55,25 @@ async function saveScreenshot(page: Page, dataDir: string, siteId: string, suffi
   return screenshotPath;
 }
 
-async function findCheckInButton(page: Page, label: string): Promise<Locator | undefined> {
-  const byRole = page.getByRole('button', { name: new RegExp(escapeRegExp(label)) }).first();
-  if (await visible(byRole)) {
-    return byRole;
-  }
+async function pageDiagnostics(page: Page, text: string): Promise<Record<string, unknown>> {
+  return {
+    url: page.url(),
+    title: await page.title().catch(() => ''),
+    textSample: text.replace(/\s+/g, ' ').slice(0, 500)
+  };
+}
 
-  const byText = page.getByText(label, { exact: false }).first();
-  if (await visible(byText)) {
-    return byText;
+async function findCheckInButton(page: Page, labels: string[]): Promise<Locator | undefined> {
+  for (const label of labels) {
+    const byRole = page.getByRole('button', { name: new RegExp(escapeRegExp(label)) }).first();
+    if (await visible(byRole)) {
+      return byRole;
+    }
+
+    const byText = page.getByText(label, { exact: false }).first();
+    if (await visible(byText)) {
+      return byText;
+    }
   }
 
   return undefined;
@@ -103,14 +113,14 @@ export class GenericConsoleSiteAdapter implements SiteAdapter {
       return result(input, startedAt, 'needs_handoff', 'Security challenge detected; manual handoff is required.', { screenshotPath });
     }
 
-    const checkInButton = await findCheckInButton(page, site.selectors.checkInButtonText);
+    const checkInButton = await findCheckInButton(page, site.selectors.checkInButtonTexts);
     if (!checkInButton) {
       const metrics = extractMetrics(text);
       const alreadyChecked = includesAny(text, site.selectors.alreadyCheckedTexts);
       const message = alreadyChecked ? 'Page indicates today may already be checked in.' : 'Check-in button was not found; login may have failed or the page changed.';
       const status = alreadyChecked ? 'skipped' : 'failed';
       const screenshotPath = status === 'failed' ? await saveScreenshot(page, input.dataDir, site.id, 'missing-button') : undefined;
-      return result(input, startedAt, status, message, { metrics, screenshotPath });
+      return result(input, startedAt, status, message, { metrics, screenshotPath, diagnostics: await pageDiagnostics(page, text) });
     }
 
     await checkInButton.click({ timeout: 15_000 });

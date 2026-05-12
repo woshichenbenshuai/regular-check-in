@@ -4,6 +4,7 @@ export type RunStatus = 'success' | 'skipped' | 'failed' | 'needs_handoff';
 
 export interface SiteSelectors {
   checkInButtonText: string;
+  checkInButtonTexts: string[];
   alreadyCheckedTexts: string[];
   successTexts: string[];
   challengeTexts: string[];
@@ -60,6 +61,7 @@ export interface CheckInResult {
   finishedAt: string;
   screenshotPath?: string;
   metrics?: CheckInMetrics;
+  diagnostics?: Record<string, unknown>;
 }
 
 export interface SiteAdapter {
