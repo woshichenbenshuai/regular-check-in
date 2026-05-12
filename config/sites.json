@@ -1,0 +1,16 @@
+[
+  {
+    "id": "elysiver",
+    "name": "Elysiver",
+    "baseUrl": "https://elysiver.h-e.top",
+    "personalPath": "/console/personal",
+    "enabled": true
+  },
+  {
+    "id": "api456",
+    "name": "API456",
+    "baseUrl": "https://api456.me",
+    "personalPath": "/console/personal",
+    "enabled": true
+  }
+]

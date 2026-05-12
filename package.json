@@ -1,0 +1,37 @@
+{
+  "name": "regular-check-in",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Docker-friendly browser automation for regular check-in tasks.",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "start": "node dist/index.js start",
+    "checkin": "node dist/index.js run",
+    "auth": "node dist/index.js auth",
+    "dev": "tsx src/index.ts",
+    "dev:checkin": "tsx src/index.ts run",
+    "dev:auth": "tsx src/index.ts auth"
+  },
+  "dependencies": {
+    "commander": "^13.1.0",
+    "dotenv": "^16.5.0",
+    "node-cron": "^3.0.3",
+    "pino": "^9.6.0",
+    "playwright": "^1.52.0",
+    "sql.js": "^1.13.0",
+    "zod": "^3.24.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.17",
+    "@types/node-cron": "^3.0.11",
+    "@types/sql.js": "^1.4.9",
+    "pino-pretty": "^13.0.0",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

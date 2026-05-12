@@ -1,0 +1,17 @@
+services:
+  regular-check-in:
+    build: .
+    container_name: regular-check-in
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      LOG_LEVEL: info
+      HEADLESS: "true"
+      TIMEZONE: Asia/Shanghai
+      CHECKIN_CRON: "15 9 * * *"
+      DATA_DIR: /app/data
+      SCREENSHOT_ON_SUCCESS: "false"
+      HANDOFF_TIMEOUT_SECONDS: "0"
+    volumes:
+      - ./data:/app/data
+      - ./config/sites.json:/app/config/sites.json:ro
