@@ -8,28 +8,18 @@
     {
       "id": "elysiver",
       "name": "Elysiver",
-      "baseUrl": "https://elysiver.h-e.top",
-      "personalPath": "/console/personal",
-      "enabled": true,
-      "auth": {
-        "type": "accessToken",
-        "userId": "691",
-        "accessTokenEnv": "ELYSIVER_ACCESS_TOKEN",
-        "headerMode": "auto"
-      }
+      "url": "https://elysiver.h-e.top",
+      "appId": "691",
+      "accessTokenEnv": "ELYSIVER_ACCESS_TOKEN",
+      "enabled": true
     },
     {
       "id": "api456",
       "name": "API456",
-      "baseUrl": "https://api456.me",
-      "personalPath": "/console/personal",
-      "enabled": true,
-      "auth": {
-        "type": "accessToken",
-        "userId": "691",
-        "accessTokenEnv": "API456_ACCESS_TOKEN",
-        "headerMode": "auto"
-      }
+      "url": "https://api456.me",
+      "appId": "691",
+      "accessTokenEnv": "API456_ACCESS_TOKEN",
+      "enabled": true
     }
   ]
 }

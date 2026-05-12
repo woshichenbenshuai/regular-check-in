@@ -13,7 +13,7 @@ export type AccessTokenHeaderMode = 'auto' | 'raw' | 'bearer';
 
 export interface SiteAccessTokenAuth {
   type: 'accessToken';
-  userId: string;
+  appId: string;
   accessToken?: string;
   accessTokenEnv?: string;
   headerMode: AccessTokenHeaderMode;

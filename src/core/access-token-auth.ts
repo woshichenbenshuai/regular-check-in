@@ -3,7 +3,7 @@ import type { SiteAccessTokenAuth, SiteConfig } from '../types.js';
 
 interface AccessTokenSession {
   authorization: string;
-  userId: string;
+  appId: string;
   user: Record<string, unknown>;
 }
 
@@ -51,7 +51,7 @@ export async function setupAccessTokenAuth(page: Page, site: SiteConfig): Promis
   }
 
   const token = resolveToken(site.auth, site.id);
-  const userId = site.auth.userId;
+  const appId = site.auth.appId;
   const selfUrl = `${site.baseUrl}/api/user/self`;
   const errors: string[] = [];
 
@@ -59,7 +59,7 @@ export async function setupAccessTokenAuth(page: Page, site: SiteConfig): Promis
     const response = await page.request.get(selfUrl, {
       headers: {
         Authorization: authorization,
-        'New-Api-User': userId,
+        'New-Api-User': appId,
         'Cache-Control': 'no-store'
       },
       timeout: 15_000
@@ -68,7 +68,7 @@ export async function setupAccessTokenAuth(page: Page, site: SiteConfig): Promis
     if (response.ok() && body.success && body.data) {
       await installBrowserAuth(page, {
         authorization,
-        userId,
+        appId,
         user: { ...body.data, token: stripBearer(token) }
       });
       return;
@@ -85,17 +85,17 @@ async function installBrowserAuth(page: Page, session: AccessTokenSession): Prom
       headers: {
         ...route.request().headers(),
         Authorization: session.authorization,
-        'New-Api-User': session.userId,
+        'New-Api-User': session.appId,
         'Cache-Control': 'no-store'
       }
     });
   });
 
-  await page.addInitScript(({ userId, user }) => {
-    window.localStorage.setItem('uid', userId);
+  await page.addInitScript(({ appId, user }) => {
+    window.localStorage.setItem('uid', appId);
     window.localStorage.setItem('user', JSON.stringify(user));
   }, {
-    userId: session.userId,
+    appId: session.appId,
     user: session.user
   });
 }

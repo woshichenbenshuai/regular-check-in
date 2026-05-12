@@ -2,27 +2,36 @@ import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { z } from 'zod';
-import type { RuntimeConfig, SiteConfig } from './types.js';
+import type { RuntimeConfig, SiteConfig, SiteAuthConfig } from './types.js';
+
+const authSchema = z
+  .discriminatedUnion('type', [
+    z.object({
+      type: z.literal('accessToken'),
+      appId: z.union([z.string(), z.number()]).optional(),
+      userId: z.union([z.string(), z.number()]).optional(),
+      accessToken: z.string().optional(),
+      accessTokenEnv: z.string().optional(),
+      headerMode: z.enum(['auto', 'raw', 'bearer']).default('auto')
+    })
+  ])
+  .optional();
 
 const siteSchema = z.object({
   id: z.string().min(1),
-  name: z.string().min(1),
-  baseUrl: z.string().url(),
+  name: z.string().optional(),
+  url: z.string().url().optional(),
+  baseUrl: z.string().url().optional(),
   personalPath: z.string().default('/console/personal'),
   enabled: z.boolean().default(true),
   schedule: z.string().optional(),
   sessionFile: z.string().optional(),
-  auth: z
-    .discriminatedUnion('type', [
-      z.object({
-        type: z.literal('accessToken'),
-        userId: z.union([z.string(), z.number()]).transform(String),
-        accessToken: z.string().optional(),
-        accessTokenEnv: z.string().optional(),
-        headerMode: z.enum(['auto', 'raw', 'bearer']).default('auto')
-      })
-    ])
-    .optional(),
+  appId: z.union([z.string(), z.number()]).optional(),
+  userId: z.union([z.string(), z.number()]).optional(),
+  accessToken: z.string().optional(),
+  accessTokenEnv: z.string().optional(),
+  headerMode: z.enum(['auto', 'raw', 'bearer']).default('auto'),
+  auth: authSchema,
   selectors: z
     .object({
       checkInButtonText: z.string().optional(),
@@ -44,6 +53,7 @@ const appConfigSchema = z.object({
 });
 
 type FileConfig = z.infer<typeof appConfigSchema>;
+type SiteInput = z.infer<typeof siteSchema>;
 
 function boolFromEnv(name: string, defaultValue: boolean): boolean {
   const value = process.env[name];
@@ -86,16 +96,53 @@ function loadRawSites(fileConfig: FileConfig): unknown {
   return fileConfig.sites;
 }
 
-function normalizeSite(site: z.infer<typeof siteSchema>): SiteConfig {
+function normalizeAuth(site: SiteInput): SiteAuthConfig | undefined {
+  if (site.auth?.type === 'accessToken') {
+    const appId = site.auth.appId ?? site.auth.userId;
+    if (appId === undefined) {
+      throw new Error(`Site ${site.id} auth.appId is required for accessToken auth`);
+    }
+    return {
+      type: 'accessToken',
+      appId: String(appId),
+      accessToken: site.auth.accessToken,
+      accessTokenEnv: site.auth.accessTokenEnv,
+      headerMode: site.auth.headerMode
+    };
+  }
+
+  const appId = site.appId ?? site.userId;
+  if (appId === undefined && !site.accessToken && !site.accessTokenEnv) {
+    return undefined;
+  }
+  if (appId === undefined) {
+    throw new Error(`Site ${site.id} appId is required when accessToken/accessTokenEnv is configured`);
+  }
+
+  return {
+    type: 'accessToken',
+    appId: String(appId),
+    accessToken: site.accessToken,
+    accessTokenEnv: site.accessTokenEnv,
+    headerMode: site.headerMode
+  };
+}
+
+function normalizeSite(site: SiteInput): SiteConfig {
+  const baseUrl = site.baseUrl ?? site.url;
+  if (!baseUrl) {
+    throw new Error(`Site ${site.id} requires url or baseUrl`);
+  }
+
   return {
     id: site.id,
-    name: site.name,
-    baseUrl: site.baseUrl.replace(/\/$/, ''),
+    name: site.name ?? site.id,
+    baseUrl: baseUrl.replace(/\/$/, ''),
     personalPath: site.personalPath.startsWith('/') ? site.personalPath : `/${site.personalPath}`,
     enabled: site.enabled,
     schedule: site.schedule,
     sessionFile: site.sessionFile,
-    auth: site.auth,
+    auth: normalizeAuth(site),
     selectors: {
       checkInButtonText: site.selectors?.checkInButtonText ?? '\u7acb\u5373\u7b7e\u5230',
       alreadyCheckedTexts: site.selectors?.alreadyCheckedTexts ?? ['\u5df2\u7b7e\u5230', '\u4eca\u65e5\u5df2\u7b7e\u5230', '\u5df2\u7ecf\u7b7e\u5230', '\u660e\u65e5\u518d\u6765'],
