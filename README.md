@@ -4,7 +4,7 @@
 
 ## 功能
 
-- 多站点配置，默认包含：
+- 多站点配置，默认在 `config/config.json` 中包含：
   - `https://elysiver.h-e.top/console/personal`
   - `https://api456.me/console/personal`
 - 使用真实 Chromium 页面执行签到。
@@ -76,9 +76,37 @@ docker compose exec regular-check-in node dist/index.js run
 docker compose exec regular-check-in node dist/index.js run --site elysiver
 ```
 
-## 站点配置
+## 配置
 
-配置文件在 `config/sites.json`。新增站点时按下面格式追加：
+配置文件在 `config/config.json`。站点统一写在 `sites` 数组里：
+
+```json
+{
+  "headless": true,
+  "timezone": "Asia/Shanghai",
+  "cron": "15 9 * * *",
+  "screenshotOnSuccess": false,
+  "handoffTimeoutSeconds": 0,
+  "sites": [
+    {
+      "id": "elysiver",
+      "name": "Elysiver",
+      "baseUrl": "https://elysiver.h-e.top",
+      "personalPath": "/console/personal",
+      "enabled": true
+    },
+    {
+      "id": "api456",
+      "name": "API456",
+      "baseUrl": "https://api456.me",
+      "personalPath": "/console/personal",
+      "enabled": true
+    }
+  ]
+}
+```
+
+新增站点时在 `sites` 数组里追加：
 
 ```json
 {
@@ -90,7 +118,7 @@ docker compose exec regular-check-in node dist/index.js run --site elysiver
 }
 ```
 
-如果按钮文案或页面提示不同，可以加 selectors：
+如果按钮文案或页面提示不同，可以在对应站点上加 selectors：
 
 ```json
 {
@@ -108,7 +136,7 @@ docker compose exec regular-check-in node dist/index.js run --site elysiver
 }
 ```
 
-也可以用环境变量 `CHECKIN_SITES_JSON` 完全覆盖配置文件。
+也可以用环境变量 `CHECKIN_SITES_JSON` 完全覆盖配置文件里的 `sites` 数组。旧的 `config/sites.json` 仍兼容读取，但新配置统一使用 `config/config.json`。
 
 ## 人机验证处理
 

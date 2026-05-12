@@ -30,6 +30,16 @@ const siteSchema = z.object({
 });
 
 const sitesSchema = z.array(siteSchema);
+const appConfigSchema = z.object({
+  headless: z.boolean().optional(),
+  timezone: z.string().optional(),
+  cron: z.string().optional(),
+  screenshotOnSuccess: z.boolean().optional(),
+  handoffTimeoutSeconds: z.number().optional(),
+  sites: sitesSchema.default([])
+});
+
+type FileConfig = z.infer<typeof appConfigSchema>;
 
 function boolFromEnv(name: string, defaultValue: boolean): boolean {
   const value = process.env[name];
@@ -48,17 +58,28 @@ function numberFromEnv(name: string, defaultValue: number): number {
   return Number.isFinite(parsed) ? parsed : defaultValue;
 }
 
-function loadRawSites(): unknown {
+function loadFileConfig(): FileConfig {
+  const configPath = path.resolve(process.cwd(), 'config', 'config.json');
+  if (fs.existsSync(configPath)) {
+    return appConfigSchema.parse(JSON.parse(fs.readFileSync(configPath, 'utf8')));
+  }
+
+  const legacySitesPath = path.resolve(process.cwd(), 'config', 'sites.json');
+  if (fs.existsSync(legacySitesPath)) {
+    return appConfigSchema.parse({
+      sites: JSON.parse(fs.readFileSync(legacySitesPath, 'utf8'))
+    });
+  }
+
+  return appConfigSchema.parse({});
+}
+
+function loadRawSites(fileConfig: FileConfig): unknown {
   if (process.env.CHECKIN_SITES_JSON) {
     return JSON.parse(process.env.CHECKIN_SITES_JSON);
   }
 
-  const sitesPath = path.resolve(process.cwd(), 'config', 'sites.json');
-  if (!fs.existsSync(sitesPath)) {
-    return [];
-  }
-
-  return JSON.parse(fs.readFileSync(sitesPath, 'utf8'));
+  return fileConfig.sites;
 }
 
 function normalizeSite(site: z.infer<typeof siteSchema>): SiteConfig {
@@ -80,18 +101,19 @@ function normalizeSite(site: z.infer<typeof siteSchema>): SiteConfig {
 }
 
 export function loadConfig(): RuntimeConfig {
-  const rawSites = loadRawSites();
+  const fileConfig = loadFileConfig();
+  const rawSites = loadRawSites(fileConfig);
   const parsedSites = sitesSchema.parse(rawSites).map(normalizeSite);
   const dataDir = path.resolve(process.env.DATA_DIR ?? path.join(process.cwd(), 'data'));
 
   return {
     dataDir,
-    headless: boolFromEnv('HEADLESS', true),
+    headless: boolFromEnv('HEADLESS', fileConfig.headless ?? true),
     logLevel: process.env.LOG_LEVEL ?? 'info',
-    timezone: process.env.TIMEZONE ?? 'Asia/Shanghai',
-    cron: process.env.CHECKIN_CRON ?? '15 9 * * *',
-    screenshotOnSuccess: boolFromEnv('SCREENSHOT_ON_SUCCESS', false),
-    handoffTimeoutSeconds: numberFromEnv('HANDOFF_TIMEOUT_SECONDS', 0),
+    timezone: process.env.TIMEZONE ?? fileConfig.timezone ?? 'Asia/Shanghai',
+    cron: process.env.CHECKIN_CRON ?? fileConfig.cron ?? '15 9 * * *',
+    screenshotOnSuccess: boolFromEnv('SCREENSHOT_ON_SUCCESS', fileConfig.screenshotOnSuccess ?? false),
+    handoffTimeoutSeconds: numberFromEnv('HANDOFF_TIMEOUT_SECONDS', fileConfig.handoffTimeoutSeconds ?? 0),
     sites: parsedSites
   };
 }
