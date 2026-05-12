@@ -1,7 +1,7 @@
 import type { Page } from 'playwright';
 import type { SiteAccessTokenAuth, SiteConfig } from '../types.js';
 
-interface AccessTokenSession {
+export interface AccessTokenSession {
   authorization: string;
   appId: string;
   user: Record<string, unknown>;
@@ -45,9 +45,9 @@ async function readApiResponse(response: Awaited<ReturnType<Page['request']['get
   return (await response.json().catch(() => ({ success: false, message: response.statusText() }))) as ApiResponse;
 }
 
-export async function setupAccessTokenAuth(page: Page, site: SiteConfig): Promise<void> {
+export async function createAccessTokenSession(page: Page, site: SiteConfig): Promise<AccessTokenSession | undefined> {
   if (site.auth?.type !== 'accessToken') {
-    return;
+    return undefined;
   }
 
   const token = resolveToken(site.auth, site.id);
@@ -66,17 +66,25 @@ export async function setupAccessTokenAuth(page: Page, site: SiteConfig): Promis
     });
     const body = await readApiResponse(response);
     if (response.ok() && body.success && body.data) {
-      await installBrowserAuth(page, {
+      return {
         authorization,
         appId,
         user: { ...body.data, token: stripBearer(token) }
-      });
-      return;
+      };
     }
     errors.push(`${response.status()} ${body.message ?? response.statusText()}`);
   }
 
   throw new Error(`Access token auth failed for ${site.id}: ${errors.join('; ')}`);
+}
+
+export async function setupAccessTokenAuth(page: Page, site: SiteConfig): Promise<AccessTokenSession | undefined> {
+  const session = await createAccessTokenSession(page, site);
+  if (!session) {
+    return undefined;
+  }
+  await installBrowserAuth(page, session);
+  return session;
 }
 
 async function installBrowserAuth(page: Page, session: AccessTokenSession): Promise<void> {

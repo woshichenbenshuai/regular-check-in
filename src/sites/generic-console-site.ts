@@ -3,6 +3,7 @@ import type { Locator, Page } from 'playwright';
 import { setupAccessTokenAuth } from '../core/access-token-auth.js';
 import { safeFilePart } from '../core/fs.js';
 import type { CheckInMetrics, CheckInResult, SiteAdapter, SiteConfig, SiteRunInput } from '../types.js';
+import { runNewApiCheckin } from './new-api-checkin.js';
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -95,6 +96,11 @@ export class GenericConsoleSiteAdapter implements SiteAdapter {
   async run(input: SiteRunInput): Promise<CheckInResult> {
     const startedAt = nowIso();
     const { page, site } = input;
+
+    const apiResult = await runNewApiCheckin(page, site, startedAt);
+    if (apiResult) {
+      return apiResult;
+    }
 
     await setupAccessTokenAuth(page, site);
     await page.goto(personalUrl(site), { waitUntil: 'domcontentloaded', timeout: 60_000 });
