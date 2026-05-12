@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/playwright:v1.52.0-noble AS build
+FROM mcr.microsoft.com/playwright:v1.60.0-noble AS build
 
 WORKDIR /app
 
@@ -11,7 +11,7 @@ COPY config ./config
 RUN npm run build
 RUN npm prune --omit=dev
 
-FROM mcr.microsoft.com/playwright:v1.52.0-noble
+FROM mcr.microsoft.com/playwright:v1.60.0-noble
 
 ENV NODE_ENV=production \
     DATA_DIR=/app/data \
