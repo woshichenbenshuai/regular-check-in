@@ -4,6 +4,7 @@ import { loadConfig } from './config.js';
 import { CheckInRunner } from './core/runner.js';
 import { startScheduler } from './core/scheduler.js';
 import { bootstrapSession } from './core/auth.js';
+import { errorInfo } from './core/error-info.js';
 import { createLogger } from './logger.js';
 
 const config = loadConfig();
@@ -53,6 +54,6 @@ program.command('sites').description('List enabled sites.').action(() => {
 });
 
 program.parseAsync().catch((error) => {
-  logger.error({ error }, 'command failed');
+  logger.error({ error: errorInfo(error) }, 'command failed');
   process.exitCode = 1;
 });

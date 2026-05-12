@@ -1,5 +1,6 @@
 import type { Logger } from 'pino';
 import { BrowserManager } from './browser.js';
+import { errorInfo } from './error-info.js';
 import { ensureRuntimeDirs } from './fs.js';
 import { AppStorage } from './storage.js';
 import { GenericConsoleSiteAdapter } from '../sites/generic-console-site.js';
@@ -29,8 +30,16 @@ export class CheckInRunner {
 
   async runSite(site: SiteConfig): Promise<CheckInResult> {
     this.logger.info({ siteId: site.id, url: `${site.baseUrl}${site.personalPath}` }, 'starting check-in');
-    const context = await this.browserManager.newContext(site);
-    const page = await context.newPage();
+    const startedAt = new Date().toISOString();
+    const context = await this.browserManager.newContext(site).catch(async (error) => {
+      await this.recordFailedRun(site, startedAt, error);
+      throw error;
+    });
+    const page = await context.newPage().catch(async (error) => {
+      await context.close().catch(() => undefined);
+      await this.recordFailedRun(site, startedAt, error);
+      throw error;
+    });
 
     try {
       const result = await this.adapter.run({
@@ -56,22 +65,27 @@ export class CheckInRunner {
       );
       return result;
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      const result: CheckInResult = {
-        siteId: site.id,
-        siteName: site.name,
-        status: 'failed',
-        message,
-        startedAt: new Date().toISOString(),
-        finishedAt: new Date().toISOString()
-      };
-      const storage = await this.storagePromise;
-      storage.recordRun(result);
-      this.logger.error({ siteId: site.id, error }, 'check-in failed');
-      return result;
+      return this.recordFailedRun(site, startedAt, error);
     } finally {
       await context.close();
     }
+  }
+
+  private async recordFailedRun(site: SiteConfig, startedAt: string, error: unknown): Promise<CheckInResult> {
+    const info = errorInfo(error);
+    const message = typeof info.message === 'string' && info.message ? info.message : 'Unknown error';
+    const result: CheckInResult = {
+      siteId: site.id,
+      siteName: site.name,
+      status: 'failed',
+      message,
+      startedAt,
+      finishedAt: new Date().toISOString()
+    };
+    const storage = await this.storagePromise;
+    storage.recordRun(result);
+    this.logger.error({ siteId: site.id, error: info }, 'check-in failed');
+    return result;
   }
 
   async run(siteId?: string): Promise<CheckInResult[]> {
